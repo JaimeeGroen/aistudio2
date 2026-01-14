@@ -1,5 +1,5 @@
 import React from 'react';
-import { Retailer, PricePoint } from '../types';
+import { Retailer, PricePoint } from '../types.ts';
 import { ExternalLink } from 'lucide-react'; // Assuming we can use basic icons, if not, I'll use text
 
 interface PriceTableProps {

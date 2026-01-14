@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { RETAILERS } from "../constants";
-import { ScrapedPrice } from "../types";
+import { RETAILERS } from "../constants.ts";
+import { ScrapedPrice } from "../types.ts";
 
 // In a real production app, this key should be proxied through a backend
 // For this demo, we rely on the process.env injection or user input context if needed.

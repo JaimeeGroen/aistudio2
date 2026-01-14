@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { RETAILERS, RACKET_DETAILS, MOCK_HISTORY } from './constants';
-import { PricePoint } from './types';
-import HistoryChart from './components/HistoryChart';
-import PriceTable from './components/PriceTable';
-import { fetchCurrentPricesWithGemini } from './services/geminiService';
+import { RETAILERS, RACKET_DETAILS, MOCK_HISTORY } from './constants.ts';
+import { PricePoint } from './types.ts';
+import HistoryChart from './components/HistoryChart.tsx';
+import PriceTable from './components/PriceTable.tsx';
+import { fetchCurrentPricesWithGemini } from './services/geminiService.ts';
 
 const App: React.FC = () => {
   const [history, setHistory] = useState<PricePoint[]>(MOCK_HISTORY);
