@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { RETAILERS } from "../constants";
 import { ScrapedPrice } from "../types";
 
@@ -10,47 +10,76 @@ const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const fetchCurrentPricesWithGemini = async (): Promise<ScrapedPrice[]> => {
   try {
-    const modelId = "gemini-3-pro-preview"; // Using the capable model for search grounding
+    // Switching to gemini-3-flash-preview as it is often more stable for Search Grounding
+    // and removing responseSchema to avoid 500 errors (RPC/XHR failures) associated with 
+    // structured output + search tools in preview models.
+    const modelId = "gemini-3-flash-preview"; 
     
     const retailerList = RETAILERS.map(r => `${r.name}: ${r.url}`).join('\n');
     
     const prompt = `
-      I need to find the current price (in Euros) of the "Siux Electra ST4 Pro" padel racket from the following specific URLs.
+      I need to find the current *lowest selling price* (in Euros) of the "Siux Electra ST4 Pro" padel racket from the following specific URLs.
       
       ${retailerList}
       
-      Please use Google Search to find the *current* price listed on these specific pages. 
-      Return the data strictly as a JSON list. 
-      If a price cannot be found for a specific retailer, use 0.
+      Please use Google Search to find the price listed on these specific pages.
+      
+      IMPORTANT PRICING RULES:
+      1. **FIND THE DEAL/SALE PRICE**: Many of these items are discounted. You MUST return the discounted price (the price the user would pay at checkout), NOT the MSRP or "Adviesprijs".
+      2. If you see two prices (e.g., "€300" crossed out and "€250" active), return 250.
+      3. Ignore "Club" or "Member" specific prices unless it is the only price available, but always prefer the public sale price.
+      
+      OUTPUT INSTRUCTIONS:
+      - Return the data strictly as a JSON array.
+      - Each item in the array should be an object with "retailerName" (string) and "price" (number).
+      - If a price cannot be found, use 0.
+      - Do not include any markdown formatting (like \`\`\`json). Just return the raw JSON string.
+      
+      Example format:
+      [
+        { "retailerName": "JustPadel", "price": 275.50 },
+        { "retailerName": "Decathlon", "price": 0 }
+      ]
     `;
-
-    // Define the schema for structured output
-    const responseSchema = {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          retailerName: { type: Type.STRING, description: "Name of the retailer (e.g. JustPadel)" },
-          price: { type: Type.NUMBER, description: "The numeric price found (e.g. 279.95)" }
-        },
-        required: ["retailerName", "price"]
-      }
-    };
 
     const response = await genAI.models.generateContent({
       model: modelId,
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: responseSchema
+        // Note: We avoid responseSchema and responseMimeType: "application/json" here
+        // because combining them with googleSearch often causes 500 errors in the current API version.
       }
     });
 
-    const jsonText = response.text;
+    let jsonText = response.text;
+    
+    // Log grounding chunks for debugging/verification purposes
+    if (response.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+       console.log("Grounding Chunks:", response.candidates[0].groundingMetadata.groundingChunks);
+    }
+
     if (!jsonText) return [];
 
-    const parsedData = JSON.parse(jsonText) as Array<{ retailerName: string, price: number }>;
+    // Clean up potential markdown code blocks
+    jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Extract JSON array if surrounded by other text
+    const startIndex = jsonText.indexOf('[');
+    const endIndex = jsonText.lastIndexOf(']');
+    if (startIndex !== -1 && endIndex !== -1) {
+        jsonText = jsonText.substring(startIndex, endIndex + 1);
+    }
+
+    let parsedData: Array<{ retailerName: string, price: number }> = [];
+    try {
+        parsedData = JSON.parse(jsonText);
+    } catch (e) {
+        console.warn("Failed to parse JSON from model response:", jsonText);
+        // Fallback: Try to use a simpler regex if JSON parse fails due to minor syntax errors? 
+        // For now, return empty to avoid breaking the app.
+        return [];
+    }
 
     // Map the AI response back to our internal retailer IDs
     const result: ScrapedPrice[] = [];
