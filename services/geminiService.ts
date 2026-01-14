@@ -1,18 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
-import { RETAILERS } from "../constants.ts";
-import { ScrapedPrice } from "../types.ts";
+import { RETAILERS } from "../constants";
+import { ScrapedPrice } from "../types";
 
-// In a real production app, this key should be proxied through a backend
-// For this demo, we rely on the process.env injection or user input context if needed.
-// However, per instructions, we assume process.env.API_KEY is available.
-
+// The API Key is injected by the build environment/process.
 const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const fetchCurrentPricesWithGemini = async (): Promise<ScrapedPrice[]> => {
   try {
-    // Switching to gemini-3-flash-preview as it is often more stable for Search Grounding
-    // and removing responseSchema to avoid 500 errors (RPC/XHR failures) associated with 
-    // structured output + search tools in preview models.
     const modelId = "gemini-3-flash-preview"; 
     
     const retailerList = RETAILERS.map(r => `${r.name}: ${r.url}`).join('\n');
@@ -47,8 +41,6 @@ export const fetchCurrentPricesWithGemini = async (): Promise<ScrapedPrice[]> =>
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // Note: We avoid responseSchema and responseMimeType: "application/json" here
-        // because combining them with googleSearch often causes 500 errors in the current API version.
       }
     });
 
@@ -76,8 +68,6 @@ export const fetchCurrentPricesWithGemini = async (): Promise<ScrapedPrice[]> =>
         parsedData = JSON.parse(jsonText);
     } catch (e) {
         console.warn("Failed to parse JSON from model response:", jsonText);
-        // Fallback: Try to use a simpler regex if JSON parse fails due to minor syntax errors? 
-        // For now, return empty to avoid breaking the app.
         return [];
     }
 

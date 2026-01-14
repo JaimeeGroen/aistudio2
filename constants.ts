@@ -1,4 +1,4 @@
-import { Retailer, PricePoint, RacketDetails } from './types.ts';
+import { Retailer, PricePoint, RacketDetails } from './types';
 
 export const RACKET_DETAILS: RacketDetails = {
   name: "Siux Electra ST4 Pro",

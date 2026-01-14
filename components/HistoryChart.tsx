@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { PricePoint, Retailer } from '../types.ts';
+import { PricePoint, Retailer } from '../types';
 
 interface HistoryChartProps {
   data: PricePoint[];
