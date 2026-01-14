@@ -1,0 +1,5 @@
+{
+  "name": "Padel Price Tracker: Siux Electra ST4 Pro",
+  "description": "A dashboard tracking the historical and current prices of the Siux Electra ST4 Pro across multiple retailers using Gemini Search Grounding.",
+  "requestFramePermissions": []
+}
